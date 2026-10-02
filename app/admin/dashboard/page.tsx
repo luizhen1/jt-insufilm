@@ -38,9 +38,9 @@ import logoImg from '@/hooks/logo.png';
 /* ==========================================================================
    TIPAGENS E INTERFACES DECLARADAS LOCALMENTE
    ========================================================================== */
-export type AppointmentStatus = 'pendente' | 'confirmado' | 'concluido' | 'cancelado';
+type AppointmentStatus = 'pendente' | 'confirmado' | 'concluido' | 'cancelado';
 
-export interface Appointment {
+interface Appointment {
   id: string;
   clienteNome: string;
   clienteTelefone: string;
@@ -53,14 +53,14 @@ export interface Appointment {
   criadoEm?: unknown;
 }
 
-export const statusLabels: Record<AppointmentStatus, string> = {
+const statusLabels: Record<AppointmentStatus, string> = {
   pendente: 'Pendente',
   confirmado: 'Confirmado',
   concluido: 'Concluído',
   cancelado: 'Cancelado',
 };
 
-export function toWhatsAppNumber(phone: string): string {
+function toWhatsAppNumber(phone: string): string {
   const digits = phone.replace(/\D/g, '');
   if (digits.length <= 11) {
     return `55${digits}`;
