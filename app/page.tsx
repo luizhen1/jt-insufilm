@@ -9,7 +9,7 @@ const phone = process.env.NEXT_PUBLIC_BUSINESS_WHATSAPP || '5511999999999';
 const OPCOES_VIDROS = ['Para-brisa', 'Vidros laterais', 'Vidro traseiro'] as const;
 
 const films = [
-  { number: '01', title: 'Fumê Convencional', description: 'Privacidade e estilo com ótimo custo-benefício para o dia a dia.', tag: 'Essencial', image: 'photo-1503376780353-7e6692767b70' },
+  { number: '01', title: 'Fumê Profissional', description: 'Privacidade e estilo com ótimo custo-benefício para o dia a dia.', tag: 'Essencial', image: 'photo-1503376780353-7e6692767b70' },
   { number: '02', title: 'Fumê G5', description: 'Máxima privacidade e tonalidade bem escura, reduzindo drasticamente a visibilidade externa.', tag: 'Mais escuro', image: 'photo-1492144534655-ae79c964c9d7' },
   { number: '03', title: 'Fumê G20', description: 'O equilíbrio perfeito entre privacidade interna e boa visibilidade para dirigir.', tag: 'Mais procurado', image: 'photo-1486262715619-67b85e0b08d3' },
   { number: '04', title: 'Fumê G35', description: 'Tonalidade suave com controle solar leve e ótima transparência de dentro para fora.', tag: 'Intermediário', image: 'photo-1503376780353-7e6692767b70' },
@@ -301,7 +301,7 @@ export default function Home() {
                 <Field label="Película desejada">
                   <select required name="pelicula" defaultValue="" className={inputClass}>
                     <option value="" disabled>Selecione uma opção</option>
-                    <option>Fumê Convencional</option>
+                    <option>Fumê Profissional</option>
                     <option>Fumê G5</option>
                     <option>Fumê G20</option>
                     <option>Fumê G35</option>

@@ -648,7 +648,7 @@ export default function Dashboard() {
 
               <MiniField label="Película Desejada">
                 <select name="tipoPelicula" className={miniInput}>
-                  <option>Fumê Convencional</option>
+                  <option>Fumê Profissional</option>
                   <option>Fumê G5</option>
                   <option>Fumê G20</option>
                   <option>Fumê G35</option>
