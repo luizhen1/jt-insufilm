@@ -1,9 +1,11 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
+import Image from 'next/image';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { ArrowDown, ArrowRight, Check, CheckCircle2, Menu, ShieldCheck, Sun, ThermometerSun, X } from 'lucide-react';
+import { ArrowDown, ArrowRight, Check, CheckCircle2, Menu, MessageCircle, ShieldCheck, Sun, ThermometerSun, X } from 'lucide-react';
 import { db } from '@/lib/firebase';
+import logoImg from '@/hooks/logo.png';
 
 const phone = process.env.NEXT_PUBLIC_BUSINESS_WHATSAPP || '5511999999999';
 const OPCOES_VIDROS = ['Para-brisa', 'Vidros laterais', 'Vidro traseiro'] as const;
@@ -89,8 +91,10 @@ export default function Home() {
       <header className="absolute inset-x-0 top-0 z-20 text-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 md:px-8">
           <a href="#inicio" className="flex items-center gap-3" aria-label="JT Insufilm início">
-            <span className="grid h-10 w-10 place-items-center rounded-full bg-lime text-sm font-black tracking-tight text-ink">JT</span>
-            <span className="text-sm font-bold uppercase tracking-[.2em]">Insufilm</span>
+            <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/20 bg-white p-1 shadow-sm">
+              <Image src={logoImg} alt="Logo JR Automotivo" className="h-full w-full object-contain" priority />
+            </span>
+            <span className="text-sm font-extrabold uppercase tracking-[.18em]">JR Automotivo</span>
           </a>
           <nav className="hidden items-center gap-9 text-sm text-white/75 md:flex">
             <a className="transition hover:text-lime" href="#peliculas">Películas</a>
@@ -321,18 +325,16 @@ export default function Home() {
                       <label
                         key={vidro}
                         onClick={() => toggleVidro(vidro)}
-                        className={`flex items-center gap-3 rounded-xl border p-3 cursor-pointer select-none transition-all ${
-                          isChecked
+                        className={`flex items-center gap-3 rounded-xl border p-3 cursor-pointer select-none transition-all ${isChecked
                             ? 'border-ink bg-ink/5 text-ink shadow-2xs font-semibold'
                             : 'border-black/10 bg-[#f7f7f3] text-black/60 hover:bg-white hover:border-black/20'
-                        }`}
+                          }`}
                       >
                         <div
-                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition ${
-                            isChecked
+                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition ${isChecked
                               ? 'border-ink bg-ink text-white'
                               : 'border-black/20 bg-white'
-                          }`}
+                            }`}
                         >
                           {isChecked && <Check size={11} strokeWidth={3} />}
                         </div>
@@ -360,9 +362,8 @@ export default function Home() {
             {feedback && (
               <p
                 role="status"
-                className={`mt-5 flex items-start gap-2 rounded-xl p-3.5 text-sm ${
-                  feedback.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
-                }`}
+                className={`mt-5 flex items-start gap-2 rounded-xl p-3.5 text-sm ${feedback.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'
+                  }`}
               >
                 {feedback.type === 'success' && <Check size={17} className="mt-0.5 shrink-0" />}
                 {feedback.message}
@@ -385,21 +386,26 @@ export default function Home() {
       <footer className="bg-ink px-5 py-10 text-white md:px-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-7 sm:flex-row sm:items-center sm:justify-between">
           <a href="#inicio" className="flex items-center gap-3">
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-lime text-xs font-black text-ink">JT</span>
-            <span className="text-xs font-bold uppercase tracking-[.2em]">Insufilm</span>
+            <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/20 bg-white p-1">
+              <Image src={logoImg} alt="Logo JR Automotivo" className="h-full w-full object-contain" />
+            </span>
+            <span className="text-xs font-bold uppercase tracking-[.2em]">JR Automotivo</span>
           </a>
           <p className="text-sm text-white/50">Películas automotivas com instalação profissional.</p>
           <div className="flex items-center gap-5">
-            <a className="text-sm text-white/70 hover:text-lime" href={`https://wa.me/${phone}`} target="_blank" rel="noreferrer">
-              Fale pelo WhatsApp
-            </a>
-            <a className="text-xs text-white/35 hover:text-white" href="/admin/login">
-              Área do instalador
+            <a
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80 transition hover:border-[#25D366]/40 hover:bg-[#25D366]/10 hover:text-[#25D366]"
+              href={`https://wa.me/${phone}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <MessageCircle size={18} className="text-[#25D366]" />
+              <span>Fale pelo WhatsApp</span>
             </a>
           </div>
         </div>
         <div className="mx-auto mt-8 max-w-7xl border-t border-white/10 pt-6 text-xs text-white/35">
-          © {new Date().getFullYear()} JT Insufilm. Todos os direitos reservados.
+          © {new Date().getFullYear()} JR Automotivo. Todos os direitos reservados.
         </div>
       </footer>
     </main>

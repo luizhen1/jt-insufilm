@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import {
+  BadgeCheck,
   CalendarDays,
   Check,
   ChevronDown,
@@ -28,7 +29,6 @@ import {
   Phone,
   Plus,
   Search,
-  Sparkles,
   X,
 } from 'lucide-react';
 import { auth, db } from '@/lib/firebase';
@@ -169,11 +169,9 @@ export default function Dashboard() {
     const today = getTodayString();
     const hojeCount = appointments.filter((a) => a.dataAgendamento === today).length;
     const pendentesCount = appointments.filter((a) => a.status === 'pendente').length;
+    const confirmadosCount = appointments.filter((a) => a.status === 'confirmado').length;
     const concluidosCount = appointments.filter((a) => a.status === 'concluido').length;
-    const g5Count = appointments.filter((a) =>
-      a.tipoPelicula?.toLowerCase().includes('g5')
-    ).length;
-    return { hojeCount, pendentesCount, concluidosCount, g5Count, total: appointments.length };
+    return { hojeCount, pendentesCount, confirmadosCount, concluidosCount, total: appointments.length };
   }, [appointments]);
 
   const visibleAppointments = useMemo(() => {
@@ -294,7 +292,7 @@ export default function Dashboard() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <p className="text-sm font-extrabold tracking-tight text-slate-900">INSUFILM PRO</p>
+                <p className="text-sm font-extrabold tracking-tight text-slate-900">JR AUTOMOTIVO</p>
                 <span className="hidden sm:inline-block rounded-full bg-emerald-100/70 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 border border-emerald-300/60">
                   Online
                 </span>
@@ -375,20 +373,20 @@ export default function Dashboard() {
 
           <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
             <div className="flex items-center justify-between text-slate-500">
+              <span className="text-xs font-medium">Confirmados</span>
+              <BadgeCheck size={16} className="text-blue-600" />
+            </div>
+            <p className="mt-2 text-2xl font-black text-blue-600">{stats.confirmadosCount}</p>
+            <p className="mt-0.5 text-[11px] text-slate-400">Aguardando atendimento</p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
+            <div className="flex items-center justify-between text-slate-500">
               <span className="text-xs font-medium">Concluídos</span>
               <Check size={16} className="text-emerald-600" />
             </div>
             <p className="mt-2 text-2xl font-black text-emerald-600">{stats.concluidosCount}</p>
             <p className="mt-0.5 text-[11px] text-slate-400">Películas instaladas</p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
-            <div className="flex items-center justify-between text-slate-500">
-              <span className="text-xs font-medium">Fumê G5</span>
-              <Sparkles size={16} className="text-indigo-600" />
-            </div>
-            <p className="mt-2 text-2xl font-black text-indigo-600">{stats.g5Count}</p>
-            <p className="mt-0.5 text-[11px] text-slate-400">Linha escura mais pedida</p>
           </div>
         </div>
 
