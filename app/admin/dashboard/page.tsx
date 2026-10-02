@@ -33,11 +33,45 @@ import {
 } from 'lucide-react';
 import { auth, db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
-import { Appointment, AppointmentStatus, statusLabels, toWhatsAppNumber } from '@/lib/appointments';
 import logoImg from '@/hooks/logo.png';
+
+/* ==========================================================================
+   TIPAGENS E INTERFACES DECLARADAS LOCALMENTE
+   ========================================================================== */
+export type AppointmentStatus = 'pendente' | 'confirmado' | 'concluido' | 'cancelado';
+
+export interface Appointment {
+  id: string;
+  clienteNome: string;
+  clienteTelefone: string;
+  veiculo: string;
+  tipoPelicula: string;
+  vidros?: string[];
+  dataAgendamento: string;
+  horario: string;
+  status: AppointmentStatus;
+  criadoEm?: unknown;
+}
+
+export const statusLabels: Record<AppointmentStatus, string> = {
+  pendente: 'Pendente',
+  confirmado: 'Confirmado',
+  concluido: 'Concluído',
+  cancelado: 'Cancelado',
+};
+
+export function toWhatsAppNumber(phone: string): string {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length <= 11) {
+    return `55${digits}`;
+  }
+  return digits;
+}
 
 type Filter = 'todos' | 'hoje' | 'pendente' | 'confirmado' | 'concluido';
 type ViewMode = 'list' | 'calendar';
+
+const OPCOES_VIDROS = ['Para-brisa', 'Vidros laterais', 'Vidro traseiro'] as const;
 
 const filters: { key: Filter; label: string }[] = [
   { key: 'todos', label: 'Todos' },
@@ -52,6 +86,10 @@ const getTodayString = () => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 };
 
+const getDefaultDateTimeString = (dateBase = getTodayString()) => {
+  return `${dateBase}T09:00`;
+};
+
 const prettyDate = (value: string) => {
   if (!value) return 'Data a combinar';
   const [year, month, day] = value.split('-').map(Number);
@@ -62,7 +100,6 @@ const prettyDate = (value: string) => {
   });
 };
 
-// Função para formatar telefone brasileiro com limite estrito
 const formatPhone = (val: string) => {
   const numbers = val.replace(/\D/g, '').slice(0, 11);
   if (numbers.length <= 2) return numbers ? `(${numbers}` : '';
@@ -83,12 +120,13 @@ export default function Dashboard() {
   const [search, setSearch] = useState('');
   const [dataLoading, setDataLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [modalDefaultDate, setModalDefaultDate] = useState(getTodayString());
+  const [modalDefaultDateTime, setModalDefaultDateTime] = useState(getDefaultDateTimeString());
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
-  // Estado do telefone no modal com máscara
+  // Estados do formulário
   const [phoneInput, setPhoneInput] = useState('');
+  const [selectedVidros, setSelectedVidros] = useState<string[]>(['Vidros laterais', 'Vidro traseiro']);
 
   // Estados do Calendário e Visualização
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -123,24 +161,21 @@ export default function Dashboard() {
     );
   }, [user]);
 
-  // Reseta para a página 1 ao alterar filtros, termo de pesquisa ou seleção do dia no calendário
   useEffect(() => {
     setCurrentPage(1);
   }, [filter, search, selectedDay]);
 
-  // Métricas do Dashboard
   const stats = useMemo(() => {
     const today = getTodayString();
     const hojeCount = appointments.filter((a) => a.dataAgendamento === today).length;
     const pendentesCount = appointments.filter((a) => a.status === 'pendente').length;
     const concluidosCount = appointments.filter((a) => a.status === 'concluido').length;
-    const nanoCeramicaCount = appointments.filter((a) =>
-      a.tipoPelicula?.toLowerCase().includes('nano')
+    const g5Count = appointments.filter((a) =>
+      a.tipoPelicula?.toLowerCase().includes('g5')
     ).length;
-    return { hojeCount, pendentesCount, concluidosCount, nanoCeramicaCount, total: appointments.length };
+    return { hojeCount, pendentesCount, concluidosCount, g5Count, total: appointments.length };
   }, [appointments]);
 
-  // Filtragem dos atendimentos
   const visibleAppointments = useMemo(() => {
     return appointments
       .filter((item) => {
@@ -153,9 +188,10 @@ export default function Dashboard() {
           item.status === filter;
 
         const term = search.trim().toLowerCase();
+        const vidrosStr = Array.isArray(item.vidros) ? item.vidros.join(' ') : '';
         const fitsSearch =
           !term ||
-          `${item.clienteNome} ${item.veiculo} ${item.clienteTelefone} ${item.tipoPelicula}`
+          `${item.clienteNome} ${item.veiculo} ${item.clienteTelefone} ${item.tipoPelicula} ${vidrosStr}`
             .toLowerCase()
             .includes(term);
 
@@ -164,13 +200,18 @@ export default function Dashboard() {
       .sort((a, b) => `${a.dataAgendamento} ${a.horario}`.localeCompare(`${b.dataAgendamento} ${b.horario}`));
   }, [appointments, filter, search, selectedDay]);
 
-  // Paginação (limite estrito de 5 itens por página)
   const totalPages = Math.ceil(visibleAppointments.length / ITEMS_PER_PAGE) || 1;
 
   const paginatedAppointments = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
     return visibleAppointments.slice(start, start + ITEMS_PER_PAGE);
   }, [visibleAppointments, currentPage]);
+
+  const toggleVidro = (vidro: string) => {
+    setSelectedVidros((prev) =>
+      prev.includes(vidro) ? prev.filter((v) => v !== vidro) : [...prev, vidro]
+    );
+  };
 
   async function changeStatus(item: Appointment, status: AppointmentStatus) {
     try {
@@ -183,21 +224,34 @@ export default function Dashboard() {
 
   async function addManual(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (selectedVidros.length === 0) {
+      notify('Selecione pelo menos um vidro para a aplicação.', 'error');
+      return;
+    }
+
     setSaving(true);
     const form = new FormData(event.currentTarget);
+    const dataHoraRaw = String(form.get('dataHoraAgendamento') || '');
+    
+    // Separa a data (YYYY-MM-DD) da hora (HH:mm)
+    const [dataParte, horaParte] = dataHoraRaw.split('T');
+    const horarioFormatado = horaParte ? `${horaParte}h` : 'Horário a combinar';
+
     try {
       await addDoc(collection(db, 'agendamentos'), {
         clienteNome: String(form.get('clienteNome')).trim(),
         clienteTelefone: phoneInput.trim(),
         veiculo: String(form.get('veiculo')).trim(),
         tipoPelicula: String(form.get('tipoPelicula')),
-        dataAgendamento: String(form.get('dataAgendamento')),
-        horario: String(form.get('horario')),
+        vidros: selectedVidros,
+        dataAgendamento: dataParte || getTodayString(),
+        horario: horarioFormatado,
         status: String(form.get('status')),
         criadoEm: serverTimestamp(),
       });
       setShowModal(false);
       setPhoneInput('');
+      setSelectedVidros(['Vidros laterais', 'Vidro traseiro']);
       notify('Agendamento salvo com sucesso!');
     } catch {
       notify('Erro ao salvar agendamento.', 'error');
@@ -207,8 +261,9 @@ export default function Dashboard() {
   }
 
   const openNewForDate = (dateStr: string) => {
-    setModalDefaultDate(dateStr);
+    setModalDefaultDateTime(getDefaultDateTimeString(dateStr));
     setPhoneInput('');
+    setSelectedVidros(['Vidros laterais', 'Vidro traseiro']);
     setShowModal(true);
   };
 
@@ -225,10 +280,9 @@ export default function Dashboard() {
 
   return (
     <main className="min-h-screen bg-[#f8fafc] pb-24 text-slate-900 md:pb-12">
-      {/* Topo / Navbar com tom contrastante suave */}
+      {/* Topo / Navbar */}
       <header className="sticky top-0 z-20 border-b border-slate-200/90 bg-slate-100/90 backdrop-blur-md shadow-xs">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-          {/* Logo e Título */}
           <div className="flex items-center gap-3">
             <div className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200/90 bg-white p-1 shadow-xs">
               <Image
@@ -249,7 +303,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Botão Sair */}
           <div className="flex items-center">
             <button
               onClick={() => signOut(auth)}
@@ -263,7 +316,6 @@ export default function Dashboard() {
       </header>
 
       <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6">
-        {/* Notificações */}
         {notice && (
           <div
             className={`mb-5 flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition-all ${
@@ -279,7 +331,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Header Principal */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
@@ -291,8 +342,9 @@ export default function Dashboard() {
           </div>
           <button
             onClick={() => {
-              setModalDefaultDate(getTodayString());
+              setModalDefaultDateTime(getDefaultDateTimeString());
               setPhoneInput('');
+              setSelectedVidros(['Vidros laterais', 'Vidro traseiro']);
               setShowModal(true);
             }}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 active:scale-95"
@@ -301,7 +353,7 @@ export default function Dashboard() {
           </button>
         </div>
 
-        {/* CARDS DE KPI / DASHBOARD */}
+        {/* CARDS DE KPI / MÉTRICAS */}
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
           <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
             <div className="flex items-center justify-between text-slate-500">
@@ -332,18 +384,17 @@ export default function Dashboard() {
 
           <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
             <div className="flex items-center justify-between text-slate-500">
-              <span className="text-xs font-medium">Nano Cerâmica</span>
+              <span className="text-xs font-medium">Fumê G5</span>
               <Sparkles size={16} className="text-indigo-600" />
             </div>
-            <p className="mt-2 text-2xl font-black text-indigo-600">{stats.nanoCeramicaCount}</p>
-            <p className="mt-0.5 text-[11px] text-slate-400">Películas de alta performance</p>
+            <p className="mt-2 text-2xl font-black text-indigo-600">{stats.g5Count}</p>
+            <p className="mt-0.5 text-[11px] text-slate-400">Linha escura mais pedida</p>
           </div>
         </div>
 
-        {/* Barra de Filtros e Alternância de Visualização */}
+        {/* Filtros e Barra de Busca */}
         <div className="mt-8 flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-3 shadow-xs lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0">
-            {/* Alternador Lista / Calendário */}
             <div className="flex rounded-lg bg-slate-100 p-0.5">
               <button
                 onClick={() => {
@@ -372,7 +423,6 @@ export default function Dashboard() {
 
             <div className="h-5 w-[1px] bg-slate-200 mx-1 hidden sm:block" />
 
-            {/* Filtros de status (quando em lista) */}
             {viewMode === 'list' && !selectedDay && (
               <div className="flex items-center gap-1">
                 {filters.map(({ key, label }) => (
@@ -411,7 +461,6 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Busca por texto */}
           <div className="relative">
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -423,7 +472,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* MODO CALENDÁRIO */}
+        {/* VISUALIZAÇÃO CALENDÁRIO */}
         {viewMode === 'calendar' && (
           <div className="mt-4 rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-6 shadow-xs">
             <CalendarMonthView
@@ -437,7 +486,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* LISTA DE AGENDAMENTOS */}
+        {/* VISUALIZAÇÃO LISTA */}
         <div className="mt-6">
           <div className="mb-3 flex items-center justify-between px-1">
             <p className="text-xs font-semibold text-slate-500">
@@ -477,14 +526,12 @@ export default function Dashboard() {
             </div>
           ) : (
             <>
-              {/* Cards Paginados (Máximo de 5) */}
               <div className="grid gap-3">
                 {paginatedAppointments.map((item) => (
                   <AppointmentCard key={item.id} item={item} onStatus={changeStatus} />
                 ))}
               </div>
 
-              {/* Barra de Paginação */}
               {totalPages > 1 && (
                 <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-200/80 pt-4 px-1">
                   <p className="text-xs text-slate-500">
@@ -500,7 +547,6 @@ export default function Dashboard() {
                   </p>
 
                   <div className="flex items-center gap-1.5">
-                    {/* Botão Anterior */}
                     <button
                       onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                       disabled={currentPage === 1}
@@ -510,7 +556,6 @@ export default function Dashboard() {
                       <span className="hidden sm:inline">Anterior</span>
                     </button>
 
-                    {/* Botões Numéricos */}
                     <div className="flex items-center gap-1">
                       {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                         <button
@@ -527,7 +572,6 @@ export default function Dashboard() {
                       ))}
                     </div>
 
-                    {/* Botão Próximo */}
                     <button
                       onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                       disabled={currentPage === totalPages}
@@ -547,8 +591,9 @@ export default function Dashboard() {
       {/* Botão Flutuante Mobile */}
       <button
         onClick={() => {
-          setModalDefaultDate(getTodayString());
+          setModalDefaultDateTime(getDefaultDateTimeString());
           setPhoneInput('');
+          setSelectedVidros(['Vidros laterais', 'Vidro traseiro']);
           setShowModal(true);
         }}
         aria-label="Novo agendamento"
@@ -557,7 +602,7 @@ export default function Dashboard() {
         <Plus size={24} />
       </button>
 
-      {/* MODAL DE CADASTRO EXPANDIDO E COM MÁSCARA */}
+      {/* MODAL DE CADASTRO COM DATA E HORA UNIFICADOS */}
       {showModal && (
         <div
           className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/50 backdrop-blur-xs p-0 sm:items-center sm:p-5"
@@ -603,33 +648,60 @@ export default function Dashboard() {
 
               <MiniField label="Película Desejada">
                 <select name="tipoPelicula" className={miniInput}>
-                  <option>Nano Cerâmica (Térmica Premium)</option>
-                  <option>Segurança Antivandalismo (PS4/PS8)</option>
-                  <option>Fumê Convencional (G5 / G20 / G35)</option>
-                  <option>Película de Carbono</option>
-                  <option>Precisa de Orientação / Orçamento</option>
+                  <option>Fumê Convencional</option>
+                  <option>Fumê G5</option>
+                  <option>Fumê G20</option>
+                  <option>Fumê G35</option>
                 </select>
               </MiniField>
 
-              <MiniField label="Data de Aplicação">
-                <input
-                  required
-                  defaultValue={modalDefaultDate}
-                  name="dataAgendamento"
-                  type="date"
-                  min={getTodayString()}
-                  className={miniInput}
-                />
-              </MiniField>
+              {/* SELEÇÃO DE VIDROS PARA APLICAÇÃO */}
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-slate-600 mb-2">
+                  Vidros para Aplicação <span className="text-slate-400 font-normal">(escolha um ou mais)</span>
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {OPCOES_VIDROS.map((vidro) => {
+                    const isChecked = selectedVidros.includes(vidro);
+                    return (
+                      <label
+                        key={vidro}
+                        onClick={() => toggleVidro(vidro)}
+                        className={`flex items-center gap-3 rounded-xl border p-3 cursor-pointer select-none transition-all ${
+                          isChecked
+                            ? 'border-slate-900 bg-slate-900/5 text-slate-900 shadow-2xs'
+                            : 'border-slate-200 bg-slate-50/50 text-slate-600 hover:border-slate-300 hover:bg-white'
+                        }`}
+                      >
+                        <div
+                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition ${
+                            isChecked
+                              ? 'border-slate-900 bg-slate-900 text-white'
+                              : 'border-slate-300 bg-white'
+                          }`}
+                        >
+                          {isChecked && <Check size={11} strokeWidth={3} />}
+                        </div>
+                        <span className="text-xs font-bold">{vidro}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
 
-              <MiniField label="Turno / Horário">
-                <select name="horario" className={miniInput}>
-                  <option>Manhã · 08h às 12h</option>
-                  <option>Tarde · 13h às 18h</option>
-                  <option>Integral (Veículo o dia todo)</option>
-                  <option>Horário a combinar</option>
-                </select>
-              </MiniField>
+              {/* NOVO CAMPO: DATA E HORÁRIO DO ATENDIMENTO JUNTOS */}
+              <div className="sm:col-span-2">
+                <MiniField label="Data e Horário do Atendimento">
+                  <input
+                    required
+                    name="dataHoraAgendamento"
+                    type="datetime-local"
+                    defaultValue={modalDefaultDateTime}
+                    min={`${getTodayString()}T00:00`}
+                    className={miniInput}
+                  />
+                </MiniField>
+              </div>
 
               <div className="sm:col-span-2">
                 <MiniField label="Status Inicial">
@@ -710,7 +782,6 @@ function CalendarMonthView({
 
   return (
     <div>
-      {/* Controles de Mês */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-4">
         <div>
           <h3 className="capitalize text-lg font-bold text-slate-900">{monthName}</h3>
@@ -743,7 +814,6 @@ function CalendarMonthView({
         </div>
       </div>
 
-      {/* Grade de Dias */}
       <div className="mt-4 grid grid-cols-7 gap-1 sm:gap-2">
         {weekHeaders.map((header) => (
           <div key={header} className="py-1 text-center text-xs font-semibold text-slate-400">
@@ -798,7 +868,6 @@ function CalendarMonthView({
                 </button>
               </div>
 
-              {/* Indicadores de Agendamentos */}
               <div className="mt-1 space-y-1">
                 {dayAppts.slice(0, 2).map((a) => (
                   <div
@@ -849,16 +918,17 @@ function AppointmentCard({
 
   const currentStatusConfig = statusStyle[item.status] || statusStyle.pendente;
   const wa = toWhatsAppNumber(item.clienteTelefone);
+  const vidrosTexto = Array.isArray(item.vidros) && item.vidros.length > 0 ? item.vidros.join(', ') : '';
+
   const message = encodeURIComponent(
-    `Olá ${item.clienteNome}! Tudo bem? Sobre a aplicação de película no seu ${item.veiculo} agendada para ${prettyDate(
-      item.dataAgendamento
-    )} no período da ${item.horario}.`
+    `Olá ${item.clienteNome}! Tudo bem? Sobre a aplicação de película (${item.tipoPelicula}${
+      vidrosTexto ? ` em: ${vidrosTexto}` : ''
+    }) no seu ${item.veiculo} agendada para ${prettyDate(item.dataAgendamento)} às ${item.horario}.`
   );
 
   return (
     <article className="group rounded-2xl border border-slate-200/80 bg-white p-4 transition-all hover:border-slate-300 hover:shadow-sm sm:p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        {/* Informações do Carro e Cliente */}
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-base font-bold text-slate-900">{item.clienteNome}</h2>
@@ -871,11 +941,27 @@ function AppointmentCard({
             </span>
           </div>
 
-          <p className="mt-1 flex items-center gap-2 text-sm text-slate-600">
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-600">
             <span className="font-semibold text-slate-800">{item.veiculo}</span>
             <span className="text-slate-300">•</span>
             <span className="text-slate-500">{item.tipoPelicula}</span>
-          </p>
+
+            {Array.isArray(item.vidros) && item.vidros.length > 0 && (
+              <>
+                <span className="text-slate-300">•</span>
+                <div className="flex flex-wrap gap-1">
+                  {item.vidros.map((v) => (
+                    <span
+                      key={v}
+                      className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700 border border-slate-200/60"
+                    >
+                      {v}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-500">
             <span className="inline-flex items-center gap-1.5 font-medium">
@@ -893,7 +979,6 @@ function AppointmentCard({
           </div>
         </div>
 
-        {/* Ações Rápidas */}
         <div className="flex items-center gap-2 border-t border-slate-100 pt-3 sm:border-0 sm:pt-0">
           <a
             href={`https://wa.me/${wa}?text=${message}`}
@@ -904,7 +989,6 @@ function AppointmentCard({
             <MessageCircle size={15} /> WhatsApp
           </a>
 
-          {/* Menu de Alterar Status */}
           <div className="relative">
             <button
               onClick={() => setMenu(!menu)}
