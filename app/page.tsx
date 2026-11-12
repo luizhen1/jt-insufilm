@@ -121,17 +121,17 @@ export default function Home() {
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=2200&q=90')] bg-cover bg-center" />
         <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/5" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/20" />
-        <div className="relative mx-auto w-full max-w-7xl px-5 md:px-8">
-          <p className="mb-6 flex items-center gap-3 text-xs font-bold uppercase tracking-[.25em] text-lime">
+        <div className="relative mx-auto w-full max-w-7xl px-5 text-center md:px-8 md:text-left">
+          <p className="mb-6 flex items-center justify-center gap-3 text-xs font-bold uppercase tracking-[.25em] text-lime md:justify-start">
             <span className="h-px w-8 bg-lime" />Instalação premium · cuidado em cada detalhe
           </p>
-          <h1 className="max-w-3xl text-5xl font-semibold leading-[.98] tracking-[-.055em] sm:text-6xl md:text-8xl">
+          <h1 className="mx-auto max-w-3xl text-5xl font-semibold leading-[.98] tracking-[-.055em] sm:text-6xl md:mx-0 md:text-8xl">
             Mais conforto.<br /><span className="text-lime">Mais proteção.</span>
           </h1>
-          <p className="mt-7 max-w-lg text-base leading-7 text-white/70 md:text-lg">
+          <p className="mx-auto mt-7 max-w-lg text-base leading-7 text-white/70 md:mx-0 md:text-lg">
             Películas automotivas instaladas com precisão para transformar sua experiência ao volante.
           </p>
-          <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row md:justify-start">
             <a href="#agendar" className="inline-flex items-center justify-center gap-3 rounded-full bg-lime px-7 py-4 text-sm font-bold text-ink transition hover:bg-white">
               Agende sua instalação <ArrowRight size={17} />
             </a>
@@ -139,7 +139,7 @@ export default function Home() {
               Conheça as películas
             </a>
           </div>
-          <div className="mt-16 grid max-w-2xl grid-cols-3 gap-4 border-t border-white/20 pt-6 md:mt-20">
+          <div className="mx-auto mt-16 grid max-w-2xl grid-cols-3 gap-4 border-t border-white/20 pt-6 md:mx-0 md:mt-20">
             {[['01', 'Controle térmico'], ['02', 'Proteção UV'], ['03', 'Privacidade']].map(([n, label]) => (
               <div key={n}>
                 <span className="block text-xs text-lime">{n}</span>
@@ -383,29 +383,49 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="bg-ink px-5 py-10 text-white md:px-8">
-        <div className="mx-auto flex max-w-7xl flex-col gap-7 sm:flex-row sm:items-center sm:justify-between">
-          <a href="#inicio" className="flex items-center gap-3">
-            <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/20 bg-white p-1">
-              <Image src={logoImg} alt="Logo JR Automotivo" className="h-full w-full object-contain" />
-            </span>
-            <span className="text-xs font-bold uppercase tracking-[.2em]">JR Automotivo</span>
-          </a>
-          <p className="text-sm text-white/50">Películas automotivas com instalação profissional.</p>
-          <div className="flex items-center gap-5">
+      <footer className="border-t border-white/10 bg-ink px-5 pb-7 pt-14 text-white md:px-8 md:pt-16">
+        <div className="mx-auto grid max-w-7xl gap-10 text-center md:grid-cols-[1.3fr_.7fr_1fr] md:gap-12 md:text-left">
+          <div>
+            <a href="#inicio" className="inline-flex items-center gap-3">
+              <span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5">
+                <Image src={logoImg} alt="Logo JR Automotivo" className="h-full w-full object-contain" />
+              </span>
+              <span className="text-sm font-bold uppercase tracking-[.2em]">JR Automotivo</span>
+            </a>
+            <p className="mx-auto mt-5 max-w-xs text-sm leading-7 text-white/60 md:mx-0">
+              Películas automotivas com instalação profissional. Mais conforto e proteção em cada caminho.
+            </p>
+          </div>
+          <nav aria-label="Navegação do rodapé">
+            <p className="text-xs font-bold uppercase tracking-[.18em] text-lime">Explore</p>
+            <div className="mt-5 flex flex-col items-center gap-3 text-sm text-white/70 md:items-start">
+              <a href="#peliculas" className="transition hover:text-lime">Nossas películas</a>
+              <a href="#trabalho" className="transition hover:text-lime">Nosso trabalho</a>
+              <a href="#agendar" className="transition hover:text-lime">Agende sua instalação</a>
+            </div>
+          </nav>
+          <div className="md:justify-self-end">
+            <p className="text-xs font-bold uppercase tracking-[.18em] text-lime">Vamos conversar?</p>
+            <p className="mt-5 text-sm leading-6 text-white/60">Tire suas dúvidas com a nossa equipe.</p>
             <a
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/80 transition hover:border-[#25D366]/40 hover:bg-[#25D366]/10 hover:text-[#25D366]"
+              className="mt-5 inline-flex items-center justify-center gap-3 rounded-full border border-lime/30 bg-lime/10 px-5 py-3 text-sm font-semibold text-lime transition hover:bg-lime hover:text-ink"
               href={`https://wa.me/${phone}`}
               target="_blank"
               rel="noreferrer"
             >
-              <MessageCircle size={18} className="text-[#25D366]" />
+              <MessageCircle size={18} />
               <span>Fale pelo WhatsApp</span>
             </a>
           </div>
         </div>
-        <div className="mx-auto mt-8 max-w-7xl border-t border-white/10 pt-6 text-xs text-white/35">
-          © {new Date().getFullYear()} JR Automotivo. Todos os direitos reservados.
+        <div className="mx-auto mt-12 flex max-w-7xl flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 text-center text-xs leading-5 text-white/50 md:mt-14 md:flex-row md:text-left">
+          <p>© {new Date().getFullYear()} JR Automotivo. Todos os direitos reservados.</p>
+          <p>
+            Site desenvolvido pela{' '}
+            <a href="https://primesolves.vercel.app/" target="_blank" rel="noopener noreferrer" className="text-white/70 underline underline-offset-4 transition hover:text-lime">
+              PrimeSolves
+            </a>.
+          </p>
         </div>
       </footer>
     </main>
